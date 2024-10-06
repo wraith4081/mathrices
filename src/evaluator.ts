@@ -30,9 +30,6 @@ export class Evaluator {
 	}
 
 	evaluate(node: ASTNode): any {
-		if ((node as any).name == 'pi') {
-			console.log(node);
-		}
 		if (node instanceof NumberNode) {
 			return node.value;
 		} else if (node instanceof VariableNode) {
@@ -41,7 +38,7 @@ export class Evaluator {
 			} else if (constants.hasOwnProperty(node.name)) {
 				return constants[node.name];
 			} else {
-				console.log(constants, constants[node.name]);
+				console.log(constants, constants[node.name], node.name);
 				throw new Error(`Undefined variable '${node.name}'`);
 			}
 		} else if (node instanceof UnitNode) {
@@ -135,44 +132,39 @@ export class Evaluator {
 				switch (node.operator) {
 					case '+':
 					case '-':
-						if (unitLeft.unit !== unitRight.unit) {
+						if (unitLeft.formatUnit() !== unitRight.formatUnit()) {
 							throw new Error(
 								`Cannot ${node.operator} values with different units`
 							);
 						}
-						const value =
+						const resultValue =
 							node.operator === '+'
 								? unitLeft.value + unitRight.value
 								: unitLeft.value - unitRight.value;
-						return new UnitValue(value, unitLeft.unit);
+						return new UnitValue(
+							resultValue,
+							unitLeft.formatUnit()
+						);
 					case '*':
 						return unitLeft.multiply(unitRight);
 					case '/':
 						return unitLeft.divide(unitRight);
 					case '^':
-						if (unitLeft instanceof UnitValue) {
-							if (typeof right === 'number') {
-								const newValue = Math.pow(
-									unitLeft.value,
-									right
-								);
-								const unitMap = unitLeft.parseUnit(
-									unitLeft.unit
-								);
-								for (const unit in unitMap) {
-									unitMap[unit] *= right;
-								}
-								return new UnitValue(
-									newValue,
-									unitLeft.formatUnit(unitMap)
-								);
-							} else {
-								throw new Error(
-									`Exponent must be a number when raising units to a power`
-								);
-							}
+						if (typeof right === 'number') {
+							// Exponentiation logic
+							const newValue = Math.pow(unitLeft.value, right);
+							const newUnits = new Map<string, number>();
+							unitLeft.units.forEach((exp, unit) => {
+								newUnits.set(unit, exp * right);
+							});
+							const unitStr = Array.from(newUnits.entries())
+								.map(([unit, exp]) =>
+									exp === 1 ? unit : `${unit}^${exp}`
+								)
+								.join('*');
+							return new UnitValue(newValue, unitStr);
 						} else {
-							return Math.pow(left, right);
+							throw new Error('Exponent must be a number');
 						}
 					default:
 						throw new Error(

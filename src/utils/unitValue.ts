@@ -1,59 +1,78 @@
 export class UnitValue {
 	value: number;
-	unit: string;
+	units: Map<string, number>;
 
-	constructor(value: number, unit: string) {
+	constructor(value: number, unitStr: string) {
 		this.value = value;
-		this.unit = unit;
+		this.units = this.parseUnit(unitStr);
+	}
+
+	parseUnit(unitStr: string): Map<string, number> {
+		const units = new Map<string, number>();
+		const parts = unitStr.split('/');
+		const numerator = parts[0].split('*');
+		const denominator = parts[1]?.split('*') || [];
+
+		numerator.forEach((unit) => {
+			units.set(unit, (units.get(unit) || 0) + 1);
+		});
+
+		denominator.forEach((unit) => {
+			units.set(unit, (units.get(unit) || 0) - 1);
+		});
+
+		return units;
+	}
+
+	formatUnit(): string {
+		const numerator: string[] = [];
+		const denominator: string[] = [];
+		this.units.forEach((exp, unit) => {
+			if (exp > 0) {
+				numerator.push(exp === 1 ? unit : `${unit}^${exp}`);
+			} else if (exp < 0) {
+				denominator.push(exp === -1 ? unit : `${unit}^${-exp}`);
+			}
+		});
+		const num = numerator.join('*') || '1';
+		const den = denominator.join('*');
+		return den ? `${num}/${den}` : num;
 	}
 
 	multiply(other: UnitValue): UnitValue {
-		const combinedUnitMap = this.combineUnitMaps(
-			this.parseUnit(this.unit),
-			this.parseUnit(other.unit),
-			'+'
-		);
-		const combinedUnitString = this.formatUnit(combinedUnitMap);
-		return new UnitValue(this.value * other.value, combinedUnitString);
+		const newValue = this.value * other.value;
+		const newUnits = new Map(this.units);
+
+		other.units.forEach((exp, unit) => {
+			newUnits.set(unit, (newUnits.get(unit) || 0) + exp);
+			if (newUnits.get(unit) === 0) {
+				newUnits.delete(unit);
+			}
+		});
+
+		const unitStr = Array.from(newUnits.entries())
+			.map(([unit, exp]) => (exp === 1 ? unit : `${unit}^${exp}`))
+			.join('*');
+
+		return new UnitValue(newValue, unitStr);
 	}
 
 	divide(other: UnitValue): UnitValue {
-		const combinedUnitMap = this.combineUnitMaps(
-			this.parseUnit(this.unit),
-			this.parseUnit(other.unit),
-			'-'
-		);
-		const combinedUnitString = this.formatUnit(combinedUnitMap);
-		return new UnitValue(this.value / other.value, combinedUnitString);
-	}
+		const newValue = this.value / other.value;
+		const newUnits = new Map(this.units);
 
-	parseUnit(unitStr: string): { [unit: string]: number } {
-		const unitMap: { [unit: string]: number } = {};
-		if (!unitStr) return unitMap;
-
-		const tokens = unitStr.split(/(?=[*/])/);
-		let currentOperator = '*';
-
-		for (const token of tokens) {
-			if (token === '*' || token === '/') {
-				currentOperator = token;
-				continue;
+		other.units.forEach((exp, unit) => {
+			newUnits.set(unit, (newUnits.get(unit) || 0) - exp);
+			if (newUnits.get(unit) === 0) {
+				newUnits.delete(unit);
 			}
+		});
 
-			const match = token.match(/^([a-zA-Z]+)(\^(-?\d+))?$/);
-			if (match) {
-				const unit = match[1];
-				const exponent = match[3] ? parseInt(match[3]) : 1;
+		const unitStr = Array.from(newUnits.entries())
+			.map(([unit, exp]) => (exp === 1 ? unit : `${unit}^${exp}`))
+			.join('*');
 
-				unitMap[unit] =
-					(unitMap[unit] || 0) +
-					(currentOperator === '*' ? exponent : -exponent);
-			} else {
-				throw new Error(`Invalid unit format: '${token}'`);
-			}
-		}
-
-		return unitMap;
+		return new UnitValue(newValue, unitStr);
 	}
 
 	combineUnitMaps(
@@ -78,32 +97,21 @@ export class UnitValue {
 		return resultMap;
 	}
 
-	formatUnit(unitMap: { [unit: string]: number }): string {
-		const positiveUnits = [];
-		const negativeUnits = [];
+	get unit() {
+		return this.formatUnit();
+	}
 
-		for (const unit in unitMap) {
-			const exponent = unitMap[unit];
-			if (exponent > 0) {
-				positiveUnits.push(
-					exponent === 1 ? `${unit}` : `${unit}^${exponent}`
-				);
-			} else if (exponent < 0) {
-				negativeUnits.push(
-					exponent === -1 ? `${unit}` : `${unit}^${-exponent}`
-				);
-			}
-		}
-
-		let unitString = '';
-
-		unitString += positiveUnits.length > 0 ? positiveUnits.join('*') : '1';
-
-		if (negativeUnits.length > 0) {
-			unitString += '/';
-			unitString += negativeUnits.join('*');
-		}
-
-		return unitString;
+	convertTo(targetUnit: string): UnitValue {
+		// Implement logic to convert this UnitValue to the target unit
+		// This might involve defining conversion factors between units
+		// Example: Convert km/h to m/s
+		/* if (this.formatUnit() === 'km/h' && targetUnit === 'm/s') {
+			const convertedValue = this.value * (1000 / 3600); // 1 km/h = 1000m / 3600s
+			return new UnitValue(convertedValue, targetUnit);
+		} */
+		// Add more conversion rules as needed
+		throw new Error(
+			`Conversion from ${this.formatUnit()} to ${targetUnit} not implemented`
+		);
 	}
 }

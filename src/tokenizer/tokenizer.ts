@@ -93,6 +93,8 @@ export function tokenize(expr: string): Token[] {
 				tokens.push({ type: 'constant', value: name, line, column });
 			} else if (builtInFunctions.includes(name)) {
 				tokens.push({ type: 'function', value: name, line, column });
+			} else if (units.includes(name)) {
+				tokens.push({ type: 'unit', value: name, line, column });
 			} else {
 				tokens.push({ type: 'identifier', value: name, line, column });
 			}

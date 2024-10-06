@@ -8,7 +8,7 @@ Mathrices is a robust and versatile mathematical expression evaluator built in T
 - Units Support: Perform calculations with physical units, ensuring dimensional consistency.
 - Matrices and Arrays: Execute matrix addition, multiplication, and indexing.
 - Conditional Expressions: Evaluate expressions based on conditions.
-- Lambda Functions: Define and use anonymous functions with parameter support.
+- Lambda Functions: Define and use anonymous fugnctions with parameter support.
 - Symbolic Differentiation: Perform symbolic differentiation of expressions with respect to variables.
 - Function Definitions: Define and invoke custom functions.
 - Error Handling: Comprehensive error messages for undefined variables, unsupported operations, and more.

@@ -19,6 +19,7 @@ import {
 	VariableNode,
 	ArrayNode,
 } from './ast';
+import { constants } from './constants';
 
 export class Parser {
 	tokens: Token[];
@@ -279,11 +280,45 @@ export class Parser {
 		if (this.match('number')) {
 			const numberToken = this.eat('number');
 			const value = parseFloat(numberToken.value);
+
 			if (this.match('unit')) {
-				return new UnitNode(
-					new NumberNode(value),
-					this.eat('unit').value
-				);
+				const numeratorUnit = this.eat('unit').value;
+
+				if (this.match('operator', '/')) {
+					this.eat('operator', '/');
+					if (this.match('unit')) {
+						const denominatorUnit = this.eat('unit').value;
+						const compoundUnit = `${numeratorUnit}/${denominatorUnit}`;
+						return new UnitNode(
+							new NumberNode(value),
+							compoundUnit
+						);
+					} else {
+						throw new ParseError(
+							`Expected unit after '/'`,
+							this.currentToken ? this.currentToken.line : -1,
+							this.currentToken ? this.currentToken.column : -1
+						);
+					}
+				} else if (this.match('operator', '*')) {
+					this.eat('operator', '*');
+					const nextToken = this.currentToken;
+					if (nextToken?.type === 'unit') {
+						const nextUnit = this.eat('unit').value;
+						const compoundUnit = `${numeratorUnit}*${nextUnit}`;
+						return new UnitNode(
+							new NumberNode(value),
+							compoundUnit
+						);
+					} else {
+						return new UnitNode(
+							new NumberNode(value),
+							numeratorUnit
+						);
+					}
+				}
+
+				return new UnitNode(new NumberNode(value), numeratorUnit);
 			} else {
 				return new NumberNode(value);
 			}
@@ -337,10 +372,8 @@ export class Parser {
 
 			while (this.match('operator', '.')) {
 				this.eat('operator', '.');
-				node = new PropertyAccessNode(
-					node,
-					this.eat('identifier').value
-				);
+				const propertyName = this.eat('identifier').value;
+				node = new PropertyAccessNode(node, propertyName);
 			}
 
 			while (this.match('bracket', '[')) {
@@ -378,6 +411,23 @@ export class Parser {
 		if (this.match('string')) {
 			const strValue = this.eat('string').value;
 			return new StringNode(strValue);
+		}
+
+		if (this.match('constant')) {
+			const constantName = this.eat('constant').value;
+			const constantValue = constants[constantName];
+
+			if (!constantValue) {
+				throw new ParseError(
+					`Unexpected token '${
+						this.currentToken ? this.currentToken.value : 'EOF'
+					}'`,
+					this.currentToken ? this.currentToken.line : -1,
+					this.currentToken ? this.currentToken.column : -1
+				);
+			}
+
+			return new NumberNode(constantValue);
 		}
 
 		throw new ParseError(

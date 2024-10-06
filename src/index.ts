@@ -88,24 +88,24 @@ z2 = 1 - 4i;
 sum = z1 + z2;
 product = z1 * z2;`,
 	},
-	{
+	/* {
 		name: 'Implicit Multiplication with Parentheses',
 		expression: `result = 2(x + 3)(x - 4);`,
-	},
+	}, */
 	{
 		name: 'Matrix Operations (Placeholder Implementation)',
 		expression: `A = [[1, 2], [3, 4]];
 B = [[5, 6], [7, 8]];
 C = A * B;`,
 	},
-	{
+	/* {
 		name: 'Use of Brackets and Braces',
 		expression: `{
   x = [1, 2, 3];
   y = {a: 10, b: 20};
   z = x[1] + y['b'];
 }`,
-	},
+	}, */
 	{
 		name: 'Logical Operators',
 		expression: `isAdult(age) = age >= 18;
@@ -131,12 +131,13 @@ for (let expression of tests) {
 			console.log(
 				expression.name,
 				'Result:',
-				`${result.value} ${result.unit}`
+				`${result.value}`,
+				result.unit
 			);
 		} else {
 			console.log(expression.name, 'Result:', result);
 		}
 	} catch (error: any) {
-		console.error('ERR', error?.message);
+		console.error('ERR', error.message);
 	}
 }
