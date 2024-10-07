@@ -254,7 +254,18 @@ export class Parser {
 				this.parseUnary()
 			);
 		}
-		return this.parseImplicitMultiplication();
+		return this.parsePostfix();
+	}
+
+	parsePostfix(): ASTNode {
+		let node = this.parseImplicitMultiplication();
+
+		while (this.match('operator', '!')) {
+			node = new UnaryOpNode('!', node, true);
+			this.eat('operator', '!');
+		}
+
+		return node;
 	}
 
 	parseImplicitMultiplication(): ASTNode {

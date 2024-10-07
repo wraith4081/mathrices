@@ -50,11 +50,17 @@ export class UnaryOpNode extends ASTNode {
 	type = 'UnaryOp';
 	operator: string;
 	operand: ASTNode;
+	isPostfix: boolean;
 
-	constructor(operator: string, operand: ASTNode) {
+	constructor(
+		operator: string,
+		operand: ASTNode,
+		isPostfix: boolean = false
+	) {
 		super();
 		this.operator = operator;
 		this.operand = operand;
+		this.isPostfix = isPostfix;
 	}
 }
 

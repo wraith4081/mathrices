@@ -18,7 +18,7 @@ import {
 	StringNode,
 	DerivativeNode,
 } from './ast';
-import { constants } from './constants';
+import { constants, functions } from './constants';
 import { ComplexNumber } from './utils/complexNumber';
 import { UnitValue } from './utils/unitValue';
 
@@ -90,7 +90,6 @@ export class Evaluator {
 			const left = this.evaluate(node.left);
 			const right = this.evaluate(node.right);
 
-			// Handle complex numbers
 			if (
 				left instanceof ComplexNumber ||
 				right instanceof ComplexNumber
@@ -120,7 +119,6 @@ export class Evaluator {
 				}
 			}
 
-			// Handle units
 			if (left instanceof UnitValue || right instanceof UnitValue) {
 				const unitLeft =
 					left instanceof UnitValue ? left : new UnitValue(left, '');
@@ -173,7 +171,6 @@ export class Evaluator {
 				}
 			}
 
-			// Handle strings
 			if (typeof left === 'string' || typeof right === 'string') {
 				if (node.operator === '+') {
 					return left.toString() + right.toString();
@@ -243,7 +240,6 @@ export class Evaluator {
 				return this.multiplyMatrices(left, right);
 			}
 
-			// Handle general binary operations
 			switch (node.operator) {
 				case '+':
 					return left + right;
@@ -288,62 +284,55 @@ export class Evaluator {
 					throw new Error(`Unsupported operator '${node.operator}'`);
 			}
 		} else if (node instanceof UnaryOpNode) {
-			const operand = this.evaluate(node.operand);
-			switch (node.operator) {
-				case '+':
-					return +operand;
-				case '-':
-					return -operand;
-				default:
+			if (node.isPostfix) {
+				if (node.operator === '!') {
+					const operand = this.evaluate(node.operand);
+					return functions.factorial([operand]);
+				} else {
 					throw new Error(
-						`Unsupported unary operator '${node.operator}'`
+						`Unsupported postfix operator '${node.operator}'`
 					);
+				}
+			} else {
+				const operand = this.evaluate(node.operand);
+				switch (node.operator) {
+					case '+':
+						return +operand;
+					case '-':
+						return -operand;
+					default:
+						throw new Error(
+							`Unsupported unary operator '${node.operator}'`
+						);
+				}
 			}
 		} else if (node instanceof FunctionNode) {
 			const args = node.args.map((arg) => this.evaluate(arg));
 
-			switch (node.name) {
-				case 'sin':
-					return Math.sin(args[0]);
-				case 'cos':
-					return Math.cos(args[0]);
-				case 'tan':
-					return Math.tan(args[0]);
-				case 'log':
-					return Math.log10(args[0]);
-				case 'ln':
-					return Math.log(args[0]);
-				case 'sqrt':
-					return Math.sqrt(args[0]);
-				case 'abs':
-					return Math.abs(args[0]);
-				default:
-					if (this.context.has(node.name)) {
-						const func = this.context.get(node.name);
-						if (func instanceof FunctionDefinitionNode) {
-							const funcEvaluator = new Evaluator(
-								new Map(this.context)
-							);
-							if (func.params.length !== args.length) {
-								throw new Error(
-									`Function '${node.name}' expects ${func.params.length} arguments, got ${args.length}`
-								);
-							}
-							for (let i = 0; i < func.params.length; i++) {
-								funcEvaluator.context.set(
-									func.params[i],
-									args[i]
-								);
-							}
-							return funcEvaluator.evaluate(func.body);
-						} else if (typeof func === 'function') {
-							return func(...args);
-						} else {
-							throw new Error(`'${node.name}' is not a function`);
-						}
-					} else {
-						throw new Error(`Undefined function '${node.name}'`);
+			if (node.name in functions) {
+				return functions?.[node.name as keyof typeof functions]?.(args);
+			}
+
+			if (this.context.has(node.name)) {
+				const func = this.context.get(node.name);
+				if (func instanceof FunctionDefinitionNode) {
+					const funcEvaluator = new Evaluator(new Map(this.context));
+					if (func.params.length !== args.length) {
+						throw new Error(
+							`Function '${node.name}' expects ${func.params.length} arguments, got ${args.length}`
+						);
 					}
+					for (let i = 0; i < func.params.length; i++) {
+						funcEvaluator.context.set(func.params[i], args[i]);
+					}
+					return funcEvaluator.evaluate(func.body);
+				} else if (typeof func === 'function') {
+					return func(...args);
+				} else {
+					throw new Error(`'${node.name}' is not a function`);
+				}
+			} else {
+				throw new Error(`Undefined function '${node.name}'`);
 			}
 		} else if (node instanceof AssignmentNode) {
 			const value = this.evaluate(node.value);

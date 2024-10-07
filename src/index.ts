@@ -2,9 +2,6 @@ import { tokenize } from './tokenizer/tokenizer';
 import { Parser } from './parser';
 import { Evaluator } from './evaluator';
 import { UnitValue } from './utils/unitValue';
-import { ComplexNumber } from './utils/complexNumber';
-import { FunctionDefinitionNode } from './ast';
-import { constants } from './constants';
 
 // Define your test cases
 const tests = [
@@ -23,6 +20,10 @@ area = pi r^2;`,
 result = circleArea(5);`,
 	},
 	{
+		name: 'Factorial Function',
+		expression: `result = factorial(5) - 4!;`,
+	},
+	{
 		name: 'Array and Vectors',
 		expression: `vectorA = [1, 2, 3];
 vectorB = [4, 5, 6];
@@ -31,7 +32,7 @@ dotProduct = vectorA[0]*vectorB[0] + vectorA[1]*vectorB[1] + vectorA[2]*vectorB[
 	{
 		name: 'Complex Numbers',
 		expression: `z = 3 + 4i;
-modulus = sqrt(z.real^2 + z.imag^2);`,
+modulus = sqrt(Re(z)^2 + Im(z)^2);`,
 	},
 	{
 		name: 'Differentiation (Placeholder Implementation)',
