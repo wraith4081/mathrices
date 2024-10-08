@@ -37,16 +37,24 @@ export class Parser {
 		this.currentToken = this.tokens[++this.pos] || null;
 	}
 
-	match(type?: TokenType, value?: string): boolean {
+	match(type?: TokenType, value?: string, startsWith = false): boolean {
 		if (!this.currentToken) return false;
+
+		if (startsWith) {
+			return (
+				(!type || this.currentToken.type.startsWith(type)) &&
+				(!value || this.currentToken.value.startsWith(value))
+			);
+		}
+
 		return (
 			(!type || this.currentToken.type === type) &&
 			(!value || this.currentToken.value === value)
 		);
 	}
 
-	eat(type?: TokenType, value?: string): Token {
-		if (this.match(type, value)) {
+	eat(type?: TokenType, value?: string, startsWith = false): Token {
+		if (this.match(type, value, startsWith)) {
 			const token = this.currentToken!;
 			this.advance();
 			return token;
@@ -336,12 +344,13 @@ export class Parser {
 		}
 
 		if (
-			this.match('identifier', 'd') &&
+			this.match('identifier', 'd', true) &&
 			this.tokens[this.pos + 1]?.type === 'operator' &&
 			this.tokens[this.pos + 1]?.value === '/' &&
 			this.tokens[this.pos + 2]?.type === 'identifier' &&
 			this.tokens[this.pos + 2]?.value.startsWith('d')
 		) {
+			console.log('derivative');
 			return this.parseDerivative();
 		}
 
@@ -498,10 +507,9 @@ export class Parser {
 
 	parseDerivative(): ASTNode {
 		// d/dx(expression)
-		this.eat('identifier', 'd');
+		this.eat('identifier', 'd', true);
 		this.eat('operator', '/');
-		this.eat('identifier', 'd');
-		const variableName = this.eat('identifier').value;
+		const variableName = this.eat('identifier', 'd', true).value.slice(1);
 		const variable = new VariableNode(variableName);
 		let expression: ASTNode;
 		if (this.match('paren', '(')) {

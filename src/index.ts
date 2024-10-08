@@ -37,7 +37,7 @@ modulus = sqrt(Re(z)^2 + Im(z)^2);`,
 	{
 		name: 'Differentiation (Placeholder Implementation)',
 		expression: `f(x) = x^3 + 2x;
-dfdx = d/dx f(x);`,
+dfdx = d/dx f(6);`,
 	},
 	{
 		name: 'Logical and Conditional Expressions',
@@ -71,8 +71,8 @@ result = square(5);`,
 	},
 	{
 		name: 'Recursive Functions',
-		expression: `factorial(n) = if(n <= 1, 1, n * factorial(n - 1));
-result = factorial(5);`,
+		expression: `fac(n) = if(n <= 1, 1, n * fac(n - 1));
+result = fac(5);`,
 	},
 	{
 		name: 'Function Overloading and Higher-Order Functions',
@@ -95,9 +95,9 @@ product = z1 * z2;`,
 	}, */
 	{
 		name: 'Matrix Operations (Placeholder Implementation)',
-		expression: `A = [[1, 2], [3, 4]];
-B = [[5, 6], [7, 8]];
-C = A * B;`,
+		expression: `a = [[1, 2], [3, 4]];
+b = [[5, 6], [7, 8]];
+c = a * b;`,
 	},
 	/* {
 		name: 'Use of Brackets and Braces',

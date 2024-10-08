@@ -354,12 +354,29 @@ export class Evaluator {
 			}
 			return result;
 		} else if (node instanceof DerivativeNode) {
-			return this.differentiate(node.expression, node.variable.name);
+			return this.differentiateAndEvaluate(
+				node.expression,
+				node.variable.name
+			);
 		} else if (node instanceof StringNode) {
 			return node.value;
 		} else {
 			throw new Error(`Unsupported AST node type '${node.type}'`);
 		}
+	}
+
+	differentiateAndEvaluate(
+		expression: ASTNode,
+		variable: string,
+		evaluationContext?: Map<string, any>
+	): any {
+		const derivativeAST = this.differentiate(expression, variable);
+		const tempEvaluator = new Evaluator(
+			evaluationContext
+				? new Map(evaluationContext)
+				: new Map(this.context)
+		);
+		return tempEvaluator.evaluate(derivativeAST);
 	}
 
 	differentiate(node: ASTNode, variable: string): ASTNode {
@@ -429,7 +446,6 @@ export class Evaluator {
 							this.differentiate(left, variable)
 						);
 					} else {
-						// Exponent is not a constant
 						throw new Error(
 							'Differentiation of variable exponents not implemented'
 						);
@@ -442,66 +458,90 @@ export class Evaluator {
 		} else if (node instanceof FunctionNode) {
 			const arg = node.args[0];
 			const derivativeOfArg = this.differentiate(arg, variable);
-			switch (node.name) {
-				case 'sin':
-					// d/dx sin(u) = cos(u) * u'
-					return new BinaryOpNode(
-						'*',
-						new FunctionNode('cos', [arg]),
-						derivativeOfArg
-					);
-				case 'cos':
-					// d/dx cos(u) = -sin(u) * u'
-					return new BinaryOpNode(
-						'*',
-						new UnaryOpNode('-', new FunctionNode('sin', [arg])),
-						derivativeOfArg
-					);
-				case 'tan':
-					// d/dx tan(u) = sec^2(u) * u'
-					// Assuming sec(u) = 1 / cos(u)
-					return new BinaryOpNode(
-						'*',
-						new BinaryOpNode(
-							'^',
+
+			if (functions.hasOwnProperty(node.name)) {
+				switch (node.name) {
+					case 'sin':
+						return new BinaryOpNode(
+							'*',
+							new FunctionNode('cos', [arg]),
+							derivativeOfArg
+						);
+					case 'cos':
+						return new BinaryOpNode(
+							'*',
+							new UnaryOpNode(
+								'-',
+								new FunctionNode('sin', [arg])
+							),
+							derivativeOfArg
+						);
+					case 'tan':
+						return new BinaryOpNode(
+							'*',
+							new BinaryOpNode(
+								'^',
+								new BinaryOpNode(
+									'/',
+									new NumberNode(1),
+									new FunctionNode('cos', [arg])
+								),
+								new NumberNode(2)
+							),
+							derivativeOfArg
+						);
+					case 'sqrt':
+						return new BinaryOpNode(
+							'*',
 							new BinaryOpNode(
 								'/',
 								new NumberNode(1),
-								new FunctionNode('cos', [arg])
+								new BinaryOpNode(
+									'*',
+									new NumberNode(2),
+									new FunctionNode('sqrt', [arg])
+								)
 							),
-							new NumberNode(2)
-						),
-						derivativeOfArg
+							derivativeOfArg
+						);
+					case 'ln':
+						return new BinaryOpNode(
+							'*',
+							new BinaryOpNode('/', new NumberNode(1), arg),
+							derivativeOfArg
+						);
+					default:
+						throw new Error(
+							`Differentiation of built-in function '${node.name}' not implemented`
+						);
+				}
+			} else if (this.context.has(node.name)) {
+				const funcDef = this.context.get(node.name);
+				if (funcDef instanceof FunctionDefinitionNode) {
+					if (funcDef.params.length !== node.args.length) {
+						throw new Error(
+							`Function '${node.name}' expects ${funcDef.params.length} arguments, got ${node.args.length}`
+						);
+					}
+
+					const substitutionMap = new Map<string, ASTNode>();
+					for (let i = 0; i < funcDef.params.length; i++) {
+						substitutionMap.set(funcDef.params[i], node.args[i]);
+					}
+
+					const substitutedBody = this.substitute(
+						funcDef.body,
+						substitutionMap
 					);
-				case 'sqrt':
-					// d/dx sqrt(u) = (1 / (2 * sqrt(u))) * u'
-					return new BinaryOpNode(
-						'*',
-						new BinaryOpNode(
-							'/',
-							new NumberNode(1),
-							new BinaryOpNode(
-								'*',
-								new NumberNode(2),
-								new FunctionNode('sqrt', [arg])
-							)
-						),
-						derivativeOfArg
-					);
-				case 'ln':
-					// d/dx ln(u) = (1 / u) * u'
-					return new BinaryOpNode(
-						'*',
-						new BinaryOpNode('/', new NumberNode(1), arg),
-						derivativeOfArg
-					);
-				default:
-					throw new Error(
-						`Differentiation of function '${node.name}' not implemented`
-					);
+
+					return this.differentiate(substitutedBody, variable);
+				} else {
+					throw new Error(`'${node.name}' is not a function`);
+				}
+			} else {
+				throw new Error(`Undefined function '${node.name}'`);
 			}
 		} else if (node instanceof ConditionalNode) {
-			// Differentiation of conditionals is not implemented
 			throw new Error(
 				'Differentiation of conditional expressions not implemented'
 			);
@@ -517,6 +557,44 @@ export class Evaluator {
 		} else {
 			throw new Error(
 				`Unsupported node type '${node.type}' for differentiation`
+			);
+		}
+	}
+
+	substitute(node: ASTNode, substitutionMap: Map<string, ASTNode>): ASTNode {
+		if (node instanceof NumberNode) {
+			return node;
+		} else if (node instanceof VariableNode) {
+			if (substitutionMap.has(node.name)) {
+				return substitutionMap.get(node.name)!;
+			}
+			return node;
+		} else if (node instanceof BinaryOpNode) {
+			return new BinaryOpNode(
+				node.operator,
+				this.substitute(node.left, substitutionMap),
+				this.substitute(node.right, substitutionMap)
+			);
+		} else if (node instanceof FunctionNode) {
+			const newArgs = node.args.map((arg) =>
+				this.substitute(arg, substitutionMap)
+			);
+			return new FunctionNode(node.name, newArgs);
+		} else if (node instanceof UnaryOpNode) {
+			return new UnaryOpNode(
+				node.operator,
+				this.substitute(node.operand, substitutionMap)
+			);
+		} else if (node instanceof ConditionalNode) {
+			return new ConditionalNode(
+				this.substitute(node.condition, substitutionMap),
+				this.substitute(node.trueExpr, substitutionMap),
+				this.substitute(node.falseExpr, substitutionMap)
+			);
+		}
+		else {
+			throw new Error(
+				`Substitution not implemented for node type '${node.type}'`
 			);
 		}
 	}
