@@ -24,8 +24,7 @@ export const functions = {
 	asec: ([x]: any[]) => Math.acos(1 / x),
 	asech: ([x]: any[]) => {
 		const xInv = 1 / x;
-		const ret = Math.sqrt(xInv * xInv - 1);
-		return Math.log(ret + xInv);
+		return Math.log(Math.sqrt(xInv * xInv - 1) + xInv);
 	},
 	asin: ([x]: any[]) => Math.asin(x),
 	asinh: ([x]: any[]) => Math.asinh(x),

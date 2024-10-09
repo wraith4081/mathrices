@@ -38,11 +38,12 @@ export class Evaluator {
 			} else if (constants.hasOwnProperty(node.name)) {
 				return constants[node.name];
 			} else {
-				console.log(constants, constants[node.name], node.name);
 				throw new Error(`Undefined variable '${node.name}'`);
 			}
 		} else if (node instanceof UnitNode) {
-			return new UnitValue(this.evaluate(node.value), node.unit);
+			const value = this.evaluate(node.value);
+			const unitStr = node.unit;
+			return new UnitValue(value, unitStr);
 		} else if (node instanceof ComplexNumberNode) {
 			return new ComplexNumber(
 				this.evaluate(node.real),
@@ -58,6 +59,16 @@ export class Evaluator {
 				} else {
 					throw new Error(
 						`Unknown property '${node.property}' on complex number`
+					);
+				}
+			} else if (obj instanceof UnitValue) {
+				if (node.property === 'value') {
+					return obj.value;
+				} else if (node.property === 'unit') {
+					return obj.unit;
+				} else {
+					throw new Error(
+						`Unknown property '${node.property}' on UnitValue`
 					);
 				}
 			} else {
@@ -130,15 +141,27 @@ export class Evaluator {
 				switch (node.operator) {
 					case '+':
 					case '-':
-						if (unitLeft.formatUnit() !== unitRight.formatUnit()) {
+						// Enforce dimensional consistency
+						if (
+							!UnitValue.areUnitsCompatible(
+								unitLeft.units,
+								unitRight.units
+							)
+						) {
 							throw new Error(
-								`Cannot ${node.operator} values with different units`
+								`Cannot ${
+									node.operator
+								} values with different or incompatible units: '${unitLeft.formatUnit()}' and '${unitRight.formatUnit()}'`
 							);
 						}
+						// Convert right to left's unit
+						const convertedRight = unitRight.convertTo(
+							unitLeft.formatUnit()
+						);
 						const resultValue =
 							node.operator === '+'
-								? unitLeft.value + unitRight.value
-								: unitLeft.value - unitRight.value;
+								? unitLeft.value + convertedRight.value
+								: unitLeft.value - convertedRight.value;
 						return new UnitValue(
 							resultValue,
 							unitLeft.formatUnit()
@@ -155,11 +178,7 @@ export class Evaluator {
 							unitLeft.units.forEach((exp, unit) => {
 								newUnits.set(unit, exp * right);
 							});
-							const unitStr = Array.from(newUnits.entries())
-								.map(([unit, exp]) =>
-									exp === 1 ? unit : `${unit}^${exp}`
-								)
-								.join('*');
+							const unitStr = UnitValue.formatUnitFromMap(newUnits);
 							return new UnitValue(newValue, unitStr);
 						} else {
 							throw new Error('Exponent must be a number');
@@ -295,6 +314,22 @@ export class Evaluator {
 				}
 			} else {
 				const operand = this.evaluate(node.operand);
+				if (operand instanceof UnitValue) {
+					// Handle unary operations on UnitValue
+					switch (node.operator) {
+						case '+':
+							return operand;
+						case '-':
+							return new UnitValue(
+								-operand.value,
+								operand.formatUnit()
+							);
+						default:
+							throw new Error(
+								`Unsupported unary operator '${node.operator}' for units`
+							);
+					}
+				}
 				switch (node.operator) {
 					case '+':
 						return +operand;
@@ -591,8 +626,7 @@ export class Evaluator {
 				this.substitute(node.trueExpr, substitutionMap),
 				this.substitute(node.falseExpr, substitutionMap)
 			);
-		}
-		else {
+		} else {
 			throw new Error(
 				`Substitution not implemented for node type '${node.type}'`
 			);

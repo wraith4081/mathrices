@@ -1,6 +1,7 @@
 import { Token, TokenType } from './types';
 import { ParseError } from '../errors';
 import { constants } from '../constants';
+import { unitRegistry } from '../utils/unitValue';
 
 export function tokenize(expr: string): Token[] {
 	const tokens: Token[] = [];
@@ -9,7 +10,7 @@ export function tokenize(expr: string): Token[] {
 	let column = 1;
 
 	const builtInFunctions = ['sin', 'cos', 'tan', 'log', 'ln', 'sqrt', 'abs'];
-	const units = ['m', 'km', 's', 'h', 'kg', 'A', 'K', 'mol', 'cd'];
+	const units = Object.keys(unitRegistry);
 
 	while (i < expr.length) {
 		let char = expr[i];

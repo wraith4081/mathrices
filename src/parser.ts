@@ -350,7 +350,6 @@ export class Parser {
 			this.tokens[this.pos + 2]?.type === 'identifier' &&
 			this.tokens[this.pos + 2]?.value.startsWith('d')
 		) {
-			console.log('derivative');
 			return this.parseDerivative();
 		}
 

@@ -35,7 +35,7 @@ dotProduct = vectorA[0]*vectorB[0] + vectorA[1]*vectorB[1] + vectorA[2]*vectorB[
 modulus = sqrt(Re(z)^2 + Im(z)^2);`,
 	},
 	{
-		name: 'Differentiation (Placeholder Implementation)',
+		name: 'Differentiation',
 		expression: `f(x) = x^3 + 2x;
 dfdx = d/dx f(6);`,
 	},
@@ -46,13 +46,13 @@ result = max(10, 20);`,
 	},
 	{
 		name: 'Evaluation with Units (Placeholder Implementation)',
-		expression: `speed = 60 km/h;
+		expression: `speed = 60 m/min;
 time = 2 h;
 distance = speed * time;
 `,
 	},
 	{
-		name: 'Lambda Expressions (Placeholder Implementation)',
+		name: 'Lambda Expressions',
 		expression: `square = ->(x) x^2;
 result = square(5);`,
 	},
@@ -83,7 +83,7 @@ result1 = applyFunction(square, 3);
 result2 = applyFunction(cube, 3);`,
 	},
 	{
-		name: 'Complex Arithmetic (Placeholder Implementation)',
+		name: 'Complex Arithmetic',
 		expression: `z1 = 2 + 3i;
 z2 = 1 - 4i;
 sum = z1 + z2;
@@ -94,7 +94,7 @@ product = z1 * z2;`,
 		expression: `result = 2(x + 3)(x - 4);`,
 	}, */
 	{
-		name: 'Matrix Operations (Placeholder Implementation)',
+		name: 'Matrix Operations',
 		expression: `a = [[1, 2], [3, 4]];
 b = [[5, 6], [7, 8]];
 c = a * b;`,
